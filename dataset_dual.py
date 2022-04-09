@@ -10,7 +10,8 @@ Constants = Constants()
 
 def collate_fn(insts):
     '''PAD the instance to the max seq length in batch'''
-    equ_nodes, com_sns_nodes, captions, equ_matrixs, com_sns_matrixs, scenes = zip(*insts)
+    equ_nodes, com_sns_nodes, captions, equ_matrixs, com_sns_matrixs, scenes = zip(
+        *insts)
     len_equ_nodes = [len(node) for node in equ_nodes]
     len_sns_nodes = [len(node) for node in com_sns_nodes]
     # padding scenes
@@ -39,29 +40,32 @@ def collate_fn(insts):
     # padding equation matrix
     equ_matrixs_pad = []
     for j, node_one in enumerate(equ_matrixs):
-        new_matrix = np.pad(equ_matrixs[j], ((0, max_equ_node_len-len(equ_matrixs[j])),(0, max_equ_node_len-len(equ_matrixs[j]))),'constant', constant_values=(0,0))
+        new_matrix = np.pad(equ_matrixs[j], ((0, max_equ_node_len-len(equ_matrixs[j])),
+                            (0, max_equ_node_len-len(equ_matrixs[j]))), 'constant', constant_values=(0, 0))
         equ_matrixs_pad.append(new_matrix)
-    
+
     # padding common sense matrix
     sns_matrixs_pad = []
     for j, node_one in enumerate(com_sns_matrixs):
-        new_matrix = np.pad(com_sns_matrixs[j], ((0, max_sns_node_len-len(com_sns_matrixs[j])),(0, max_sns_node_len-len(com_sns_matrixs[j]))),'constant', constant_values=(0,0))
+        new_matrix = np.pad(com_sns_matrixs[j], ((0, max_sns_node_len-len(com_sns_matrixs[j])),
+                            (0, max_sns_node_len-len(com_sns_matrixs[j]))), 'constant', constant_values=(0, 0))
         sns_matrixs_pad.append(new_matrix)
-    return torch.LongTensor(batch_equ_nodes), torch.LongTensor(batch_sns_nodes),torch.FloatTensor(len_equ_nodes), torch.FloatTensor(len_sns_nodes),torch.FloatTensor(equ_matrixs_pad), torch.FloatTensor(sns_matrixs_pad), torch.LongTensor(batch_captions), torch.LongTensor(batch_scenes)
+    return torch.LongTensor(batch_equ_nodes), torch.LongTensor(batch_sns_nodes), torch.FloatTensor(len_equ_nodes), torch.FloatTensor(len_sns_nodes), torch.FloatTensor(equ_matrixs_pad), torch.FloatTensor(sns_matrixs_pad), torch.LongTensor(batch_captions), torch.LongTensor(batch_scenes)
+
 
 class MyDataset(torch.utils.data.Dataset):
-    def __init__(self, src_word2idx, tgt_word2idx, node_insts=None, rel_insts=None, node_insts_1=None, rel_insts_1=None,scene_insts=None,tgt_insts=None):
-        src_idx2word = {idx:word for word, idx in src_word2idx.items()}
+    def __init__(self, src_word2idx, tgt_word2idx, node_insts=None, rel_insts=None, node_insts_1=None, rel_insts_1=None, scene_insts=None, tgt_insts=None):
+        src_idx2word = {idx: word for word, idx in src_word2idx.items()}
         self._src_word2idx = src_word2idx
         self._src_idx2word = src_idx2word
-        self._node_insts = node_insts # equation info
-        self._node_insts_1 = node_insts_1 # common sense info
+        self._node_insts = node_insts  # equation info
+        self._node_insts_1 = node_insts_1  # common sense info
 
-        tgt_idx2word = {idx:word for word, idx in tgt_word2idx.items()}
+        tgt_idx2word = {idx: word for word, idx in tgt_word2idx.items()}
         self._tgt_word2idx = tgt_word2idx
         self._tgt_idx2word = tgt_idx2word
-        self._rel_insts = rel_insts # equation info
-        self._rel_insts_1 = rel_insts_1 # common sense info
+        self._rel_insts = rel_insts  # equation info
+        self._rel_insts_1 = rel_insts_1  # common sense info
         self._tgt_insts = tgt_insts
         self._scene_insts = scene_insts
 
@@ -99,7 +103,7 @@ class MyDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return self.n_insts
-    
+
     def __getitem__(self, idx):
         # return one data pair (node and caption and adjmatrix)
         one_caption = self._tgt_insts[idx] + [Constants.EOS_WORD]
@@ -109,10 +113,14 @@ class MyDataset(torch.utils.data.Dataset):
         other_node = self._node_insts_1[idx]
         other_rel = self._rel_insts_1[idx]
 
-        one_num_caption = [self._src_word2idx.get(x,Constants.UNK) for x in one_caption]
-        one_num_node = [self._src_word2idx.get(x,Constants.UNK) for x in one_node]
-        one_num_scene = [self._src_word2idx.get(x, Constants.UNK) for x in one_scene]
-        other_num_node = [self._src_word2idx.get(x,Constants.UNK) for x in other_node]
+        one_num_caption = [self._src_word2idx.get(
+            x, Constants.UNK) for x in one_caption]
+        one_num_node = [self._src_word2idx.get(
+            x, Constants.UNK) for x in one_node]
+        one_num_scene = [self._src_word2idx.get(
+            x, Constants.UNK) for x in one_scene]
+        other_num_node = [self._src_word2idx.get(
+            x, Constants.UNK) for x in other_node]
         # build adj matrix
         # this is graph for equation information
         i = 0
@@ -120,7 +128,7 @@ class MyDataset(torch.utils.data.Dataset):
         for tok in one_node:
             one_inner_dict[tok] = i
             i += 1
-        
+
         node_num = len(one_inner_dict)
         matrix = np.zeros((node_num, node_num), dtype=int)
         for m in range(0, node_num):
@@ -129,15 +137,15 @@ class MyDataset(torch.utils.data.Dataset):
         for r in one_rel:
             head, tail = r
             loc1, loc2 = one_inner_dict[head], one_inner_dict[tail]
-            matrix[loc1][loc2], matrix[loc2][loc1] = 1,1
-        
+            matrix[loc1][loc2], matrix[loc2][loc1] = 1, 1
+
         # common sense graph
         ii = 0
         other_inner_dict = {}
         for tok_other in other_node:
             other_inner_dict[tok_other] = ii
             ii += 1
-        
+
         other_node_num = len(other_inner_dict)
         other_matrix = np.zeros((other_node_num, other_node_num), dtype=int)
         for m_other in range(0, other_node_num):
@@ -146,5 +154,5 @@ class MyDataset(torch.utils.data.Dataset):
         for r_other in other_rel:
             head_other, tail_other = r_other
             loc1_other, loc2_other = other_inner_dict[head_other], other_inner_dict[tail_other]
-            other_matrix[loc1_other][loc2_other], other_matrix[loc2_other][loc1_other] = 1,1
+            other_matrix[loc1_other][loc2_other], other_matrix[loc2_other][loc1_other] = 1, 1
         return one_num_node, other_num_node, one_num_caption, matrix, other_matrix, one_num_scene
